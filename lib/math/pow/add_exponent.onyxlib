@@ -1,3 +1,6 @@
-scoreboard players operation $output onyx.math *= $input onyx.math
-scoreboard players remove $exponent onyx.math 1
-execute if score $exponent onyx.math matches 1.. run function :datapack_name::lib/math/pow/add_exponent
+scoreboard players operation $mod onyx.math = $exponent onyx.math
+scoreboard players operation $mod onyx.math %= $2 onyx.const
+execute if score $mod onyx.math matches 1 run scoreboard players operation $output onyx.math *= $input onyx.math
+scoreboard players operation $input onyx.math *= $input onyx.math
+scoreboard players operation $exponent onyx.math /= $2 onyx.const
+execute if score $exponent onyx.math matches 2.. run function :datapack_name::lib/math/pow/add_exponent

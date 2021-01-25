@@ -169,7 +169,7 @@ class Player:
         """
         if self.scoreboard_critera != "trigger" and self.is_created is True:
             Handler._warn(f"'{self.scoreboard}' should have 'trigger' critera")
-        Handler._warn(f"scoreboard players enable {self.name} {self.scoreboard}")
+        Handler._cmds.append(f"scoreboard players enable {self.name} {self.scoreboard}")
 
     def pow(self, value: Union[int, "Player"]):
         """Raises the score to the exponent value
@@ -177,17 +177,27 @@ class Player:
         Args:
             value (Union[int, Player])
         """
-        if value == 2:
-            Handler._cmds.append(f"scoreboard players operation {self.name} {self.scoreboard} *= {self.name} {self.scoreboard}")
+        if value == 0:
+            Handler._cmds.append(f"scoreboard players set {self.name} {self.scoreboard} 1")
+        elif isinstance(value, int):
+            if value == 1: return
+            if value < 0:
+                Handler._warn('Squaring by a negative number isn\'t supported')
+            if value > 30:
+                Handler._warn("An exponent higher than 30 will overflow")
+            Handler._cmds.append(f"scoreboard players set $output onyx.math 1")
+            while value > 1: # an implementation of square and multiply
+                if value % 2 == 0:
+                    Handler._cmds.append(f"scoreboard players operation {self.name} {self.scoreboard} *= {self.name} {self.scoreboard}")
+                else:
+                    Handler._cmds.append(f"scoreboard players operation $output {self.scoreboard} *= {self.name} {self.scoreboard}")
+                    Handler._cmds.append(f"scoreboard players operation {self.name} {self.scoreboard} *= {self.name} {self.scoreboard}")
+                value //= 2
+            Handler._cmds.append(f"scoreboard players operation {self.name} {self.scoreboard} *= $output onyx.math")
         else:
             Handler.load_lib(lib.math)
             Handler._cmds.append(f"scoreboard players operation $input onyx.math = {self.name} {self.scoreboard}")
-            if isinstance(value, int):
-                Handler._cmds.append(f"scoreboard players set $exponent onyx.math {math.floor(value)}")
-                if value > 30:
-                    Handler._warn("An exponent higher than 30 will overflow")
-            else:
-                Handler._cmds.append(f"scoreboard players operation $exponent onyx.math = {value.name} {value.scoreboard}")
+            Handler._cmds.append(f"scoreboard players operation $exponent onyx.math = {value.name} {value.scoreboard}")
             Handler._cmds.append(f"function {Handler._datapack_name}:lib/math/pow/main")
             Handler._cmds.append(f"scoreboard players operation {self.name} {self.scoreboard} = $output onyx.math")
 
@@ -284,11 +294,10 @@ class Player:
         Handler.load_lib(lib.bitwise)
 
         if isinstance(value, Player):
-            Handler._cmds.append(f"scoreboard players operation $input_1 onyx.bitwise = {self.name} {self.scoreboard}")
+            Handler._cmds.append(f"scoreboard players add {self.name} {self.scoreboard} 1")
+            Handler._cmds.append(f"scoreboard players operation {self.name} {self.scoreboard} *= $-1 onyx.const")
         else:
-            Handler._cmds.append(f"scoreboard players set $input_1 onyx.bitwise {value}")
-        Handler._cmds.append(f"function {Handler._datapack_name}:lib/bitwise/not/main")
-        Handler._cmds.append(f"scoreboard players operation {self.name} {self.scoreboard} = $output onyx.bitwise")
+            Handler._cmds.append(f"scoreboard players set {self.name} {self.scoreboard} {~value}")
 
     def AND(self, value_1: Union[int, "Player"], value_2: int = None):
         """
@@ -320,7 +329,11 @@ class Player:
             value_1 (Union[int, Player]): The value to shift.
             value_2 (int, optional): The amount of bits to shift by. If unspecified, the value of ``value_1`` is moved to ``value_2``, and the value of the current player is assigned to ``value_1``. Defaults to None.
         """
-        self._multi_bitwise("left_shift", value_1, value_2)
+        if value_2 is None:
+            Handler._add_to_init(f"scoreboard players set {1 << value_1} onyx.const {1 << value_1}")
+            Handler._cmds.append(f"scoreboard players set {self.name} {self.scoreboard} *= {(1 << value_1)} onyx.const")
+        else:
+            Handler._cmds.append(f"scoreboard players set {self.name} {self.scoreboard} {(value_1 << value_2) % (1 << 32)}")
 
     def RIGHT_SHIFT(self, value_1: Union[int, "Player"], value_2: int = None):
         """
